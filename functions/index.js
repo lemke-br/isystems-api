@@ -1,38 +1,54 @@
 const functions = require('firebase-functions');
-const admin = require("firebase-admin");
-const app = require("express")();
+const express = require('express');
+const cors = require('cors');
+const admin = require('firebase-admin');
+const app = express();
 
 admin.initializeApp();
-const db = admin.firestore().collection("participants");
 
-//GET Function
-app.get("/participants", function (request, response) {
-  db.get()
-    .then(function (docs) {
-      let todos = [];
-      docs.forEach(function (doc) {
-        todos.push({
-          id: doc.id,
-          firstName: doc.data().firstName,
-          lastName: doc.data().lastName,
-          participation: doc.data().participation
-        })
-      })
-      response.json(todos);
-    });
+app.use(cors({ origin: true }));
+
+//Write All
+app.post('/', async (req, res) => {
+  const user = req.body;
+  await admin.firestore().collection('participants').add(user); 
+  res.status(201).json({ general: "Created"});
+});
+
+//Read All
+app.get('/', async (req, res) => {
+  const snapshot = await admin.firestore().collection('participants').get();
+  let users = [];
+  snapshot.forEach(doc => {
+    let id = doc.id;
+    let data = doc.data();
+    users.push({id, ...data});
+  });
+  res.status(200).send(JSON.stringify(users));
+});
+
+//Read One
+app.get("/:id", async (req, res) => {
+  const snapshot = await
+  admin.firestore().collection('participants').doc(req.params.id).get();
+  const userId = snapshot.id;
+  const userData = snapshot.data();
+  res.status(200).send(JSON.stringify({id: userId, ...userData}));
 })
 
-//POST Function
-app.post("/participants", function (request, response) {
-  db.add({ 
-    firstName: request.body.firstName, 
-    lastName: request.body.lastName, 
-    participation: request.body.participation  
-  })
-    .then(function () {
-      response.json({ 
-        general: "Works" });
-    })
+//Delete
+app.delete("/:id", async (req, res) => {
+  await
+  admin.firestore().collection("participants").doc(req.params.id).delete();
+  res.status(200).send();
 })
 
-exports.api = functions.https.onRequest(app)
+//Update
+app.put("/:id", async (req, res) => {
+  const body = req.body;
+  await 
+  admin.firestore().collection('participants').doc(req.params.id).update(body);
+  res.status(200).send()
+});
+
+exports.api = functions.https.onRequest(app);
